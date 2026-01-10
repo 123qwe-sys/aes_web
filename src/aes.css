@@ -1,0 +1,123 @@
+﻿* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+body {
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	min-height: 100vh;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 20px;
+}
+.container {
+	background: white;
+	border-radius: 10px;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+	padding: 40px;
+	max-width: 500px;
+	width: 100%;
+}
+h1 {
+	color: #333;
+	margin-bottom: 30px;
+	text-align: center;
+}
+.form-group {
+	margin-bottom: 20px;
+}
+label {
+	display: block;
+	margin-bottom: 8px;
+	color: #555;
+	font-weight: 500;
+}
+input[type="file"],
+input[type="text"],
+select {
+	width: 100%;
+	padding: 10px;
+	border: 1px solid #ddd;
+	border-radius: 5px;
+	font-size: 14px;
+	transition: border-color 0.3s;
+}
+input[type="file"]:focus,
+input[type="text"]:focus,
+select:focus {
+	outline: none;
+	border-color: #667eea;
+	box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+button {
+	width: 100%;
+	padding: 12px;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
+	border: none;
+	border-radius: 5px;
+	font-size: 16px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: transform 0.2s, box-shadow 0.2s;
+}
+button:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
+}
+.message {
+	margin-top: 20px;
+	padding: 15px;
+	border-radius: 5px;
+	display: none;
+}
+.message.success {
+	background-color: #d4edda;
+	color: #155724;
+	display: block;
+}
+.message.error {
+	background-color: #f8d7da;
+	color: #721c24;
+	display: block;
+}
+.loading {
+	display: none;
+	text-align: center;
+	margin-top: 10px;
+}
+.spinner {
+	border: 3px solid #f3f3f3;
+	border-top: 3px solid #667eea;
+	border-radius: 50%;
+	width: 20px;
+	height: 20px;
+	animation: spin 1s linear infinite;
+	display: inline-block;
+	margin-right: 10px;
+}
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+/* Extracted inline-style targets */
+#ivGroup, #nonceGroup, #ivGroupDec, #nonceGroupDec {
+	display: none;
+}
+hr {
+	margin: 24px 0;
+}
+.small-title {
+	font-size: 18px;
+	text-align: center;
+	margin-bottom: 16px;
+}
+

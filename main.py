@@ -1,21 +1,15 @@
 ﻿from fastapi import FastAPI, UploadFile, Form
 from fastapi.responses import HTMLResponse,FileResponse
 from Crypto.Cipher import AES
-import random
-from typing import Any
+import secrets
+from typing import Any, Optional
 
-def check_key_mode(key: str, mode: str,kwargs:dict):
+def check_key_mode(key: str, mode: str):
     if not len(key) in [16, 24, 32]:
         raise ValueError("Key must be either 16, 24, or 32 bytes long.")
     if mode.upper() not in ["EAX", "CBC", "CFB", "OFB", "CTR"]:
         raise ValueError("Invalid mode. Choose from EAX, CBC, CFB, OFB, CTR.")
-    if mode.upper() == "CTR" and "nonce" not in kwargs:
-        kwargs["nonce"] = b''  # CTR mode requires a nonce; using empty bytes as default
-    if mode.upper() in ["CBC", "CFB", "OFB"] and "iv" not in kwargs:
-        raise ValueError(f"Mode {mode} requires an 'iv' parameter.")
-    if mode.upper() == "EAX" and "nonce" not in kwargs:
-        kwargs["nonce"] = random.randbytes(16)  # EAX mode requires a nonce
-    return key, mode
+    return key, mode.upper()
 
 app=FastAPI()
 
@@ -23,7 +17,9 @@ app=FastAPI()
 async def read_root():
     return {"file_name": "Please provide a file name in the URL."}
 
-
+@app.get("/file_src/{file_name}")
+async def src_file(file_name: str):
+    return FileResponse(f"src/{file_name}", filename=file_name)
 @app.get("/file_html/{file_name}", response_class=HTMLResponse)
 async def read_html_file(file_name: str):
     return open(f"src/{file_name}",encoding="utf-8").read()
@@ -33,13 +29,104 @@ async def read_file(file_name: str):
     return FileResponse(f"file/{file_name}",media_type='application/octet-stream',filename=file_name)
 
 @app.post("/encrypt_file/")
-async def encrypt_file(file: UploadFile, key: str,mode: str="EAX",iv: Any=None, nonce: Any=None):
-    kwargs = {"iv": iv, "nonce": nonce}
-    kwargs = {k: v for k, v in kwargs.items() if v is not None}
-    key, mode = check_key_mode(key, mode,kwargs)
-    cipher = AES.new(key=key.encode('utf-8'), mode=getattr(AES, "MODE_" + mode.upper()),**kwargs)
+async def encrypt_file(
+    file: UploadFile,
+    key: str = Form(...),
+    mode: str = Form("EAX"),
+    iv: Optional[str] = Form(None),
+    nonce: Optional[str] = Form(None),
+):
+    key, mode = check_key_mode(key, mode)
+    key_bytes = key.encode('utf-8')
     plaintext = await file.read()
-    ciphertext, tag = cipher.encrypt_and_digest(plaintext)
-    with open(f"file/encrypted_{file.filename}", "wb") as filea:
-        [ filea.write(x) for x in (cipher.nonce, tag, ciphertext) ]
+
+    # convert hex strings to bytes if provided (use separate variables so types are bytes|None for cipher)
+    if isinstance(iv, str):
+        iv_bytes = bytes.fromhex(iv)
+    else:
+        iv_bytes = iv
+    if isinstance(nonce, str):
+        nonce_bytes = bytes.fromhex(nonce)
+    else:
+        nonce_bytes = nonce
+
+    if mode == 'EAX':
+        if nonce_bytes is None:
+            nonce_bytes = secrets.token_bytes(16)
+        cipher = AES.new(key=key_bytes, mode=AES.MODE_EAX, nonce=nonce_bytes)
+        ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+        with open(f"file/encrypted_{file.filename}", "wb") as filea:
+            filea.write(cipher.nonce + tag + ciphertext)
+    elif mode == 'CBC':
+        if iv_bytes is None:
+            iv_bytes = secrets.token_bytes(16)
+        # PKCS7 padding
+        pad_len = 16 - (len(plaintext) % 16)
+        padded = plaintext + bytes([pad_len]) * pad_len
+        cipher = AES.new(key=key_bytes, mode=AES.MODE_CBC, iv=iv_bytes)
+        ciphertext = cipher.encrypt(padded)
+        with open(f"file/encrypted_{file.filename}", "wb") as filea:
+            filea.write(iv_bytes + ciphertext)
+    elif mode in ('CFB', 'OFB'):
+        if iv_bytes is None:
+            raise ValueError(f"Mode {mode} requires an 'iv' parameter.")
+        cipher = AES.new(key=key_bytes, mode=getattr(AES, 'MODE_' + mode), iv=iv_bytes)
+        ciphertext = cipher.encrypt(plaintext)
+        with open(f"file/encrypted_{file.filename}", "wb") as filea:
+            filea.write(iv_bytes + ciphertext)
+    elif mode == 'CTR':
+        if nonce_bytes is None:
+            nonce_bytes = secrets.token_bytes(16)
+        cipher = AES.new(key=key_bytes, mode=AES.MODE_CTR, nonce=nonce_bytes)
+        ciphertext = cipher.encrypt(plaintext)
+        with open(f"file/encrypted_{file.filename}", "wb") as filea:
+            filea.write(cipher.nonce + ciphertext)
+    else:
+        raise ValueError('Unsupported mode')
+
     return {"message": f"File '{file.filename}' encrypted successfully as 'encrypted_{file.filename}'."}
+
+@app.post("/decrypt_file/")
+async def decrypt_file(
+    file: UploadFile,
+    key: str = Form(...),
+    mode: str = Form("EAX"),
+):
+    key, mode = check_key_mode(key, mode)
+    key_bytes = key.encode('utf-8')
+    ciphertext_all = await file.read()
+
+    # If user provided hex iv/nonce, convert
+
+    if mode == 'EAX':
+        # expect: nonce(16) + tag(16) + ciphertext
+        nonce_in = ciphertext_all[:16]
+        tag = ciphertext_all[16:32]
+        ciphertext = ciphertext_all[32:]
+        cipher = AES.new(key=key_bytes, mode=AES.MODE_EAX, nonce=nonce_in)
+        plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+    elif mode == 'CBC':
+        iv_in = ciphertext_all[:16]
+        ciphertext = ciphertext_all[16:]
+        cipher = AES.new(key=key_bytes, mode=AES.MODE_CBC, iv=iv_in)
+        padded = cipher.decrypt(ciphertext)
+        pad_len = padded[-1]
+        if pad_len < 1 or pad_len > 16:
+            raise ValueError('Invalid padding')
+        plaintext = padded[:-pad_len]
+    elif mode in ('CFB', 'OFB'):
+        iv_in = ciphertext_all[:16]
+        ciphertext = ciphertext_all[16:]
+        cipher = AES.new(key=key_bytes, mode=getattr(AES, 'MODE_' + mode), iv=iv_in)
+        plaintext = cipher.decrypt(ciphertext)
+    elif mode == 'CTR':
+        nonce_in = ciphertext_all[:16]
+        ciphertext = ciphertext_all[16:]
+        cipher = AES.new(key=key_bytes, mode=AES.MODE_CTR, nonce=nonce_in)
+        plaintext = cipher.decrypt(ciphertext)
+    else:
+        raise ValueError('Unsupported mode')
+
+    with open(f"file/decrypted_{file.filename}", "wb") as filea:
+        filea.write(plaintext)
+    return {"message": f"File '{file.filename}' decrypted successfully as 'decrypted_{file.filename}'."}
