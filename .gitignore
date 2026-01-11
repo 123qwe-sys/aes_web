@@ -1,2 +1,5 @@
 ﻿__pycache__/*
 file/*
+encrypt/__pycache__/*
+encrypt/aes.pyc
+.vscode/*

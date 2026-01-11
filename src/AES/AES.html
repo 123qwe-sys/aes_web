@@ -1,0 +1,94 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AES 文件加密工具</title>
+    <link rel="stylesheet" href="/file_src/AES/AES.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 AES 文件加密</h1>
+        <form id="encryptForm">
+            <div class="form-group">
+                <label for="file">选择文件</label>
+                <input type="file" id="file" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="key">加密密钥 (16/24/32 字节)</label>
+                <input type="text" id="key" placeholder="输入加密密钥" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="mode">加密模式</label>
+                <select id="mode" required>
+                    <option value="EAX">EAX</option>
+                    <option value="CBC">CBC</option>
+                    <option value="CFB">CFB</option>
+                    <option value="OFB">OFB</option>
+                    <option value="CTR">CTR</option>
+                </select>
+            </div>
+            
+                <div class="form-group" id="ivGroup">
+                    <label for="iv">IV（十六进制，16 字节 = 32 个十六进制字符）</label>
+                    <input type="text" id="iv" placeholder="例如：a1b2c3... （32 个十六进制字符）">
+                </div>
+
+                <div class="form-group" id="nonceGroup">
+                    <label for="nonce">Nonce（十六进制，可选）</label>
+                    <input type="text" id="nonce" placeholder="例如：1a2b3c...（可留空，EAX/CTR 可由服务端生成）">
+                </div>
+            <button type="submit">加密并下载</button>
+        </form>
+        
+        <hr>
+
+        <h1 class="small-title">🔓 AES 文件解密</h1>
+        <form id="decryptForm">
+            <div class="form-group">
+                <label for="dec_file">选择加密文件</label>
+                <input type="file" id="dec_file" required>
+            </div>
+
+            <div class="form-group">
+                <label for="dec_key">解密密钥 (16/24/32 字节)</label>
+                <input type="text" id="dec_key" placeholder="输入解密密钥" required>
+            </div>
+
+            <div class="form-group">
+                <label for="dec_mode">加密模式（用于告诉后端如何解析文件）</label>
+                <select id="dec_mode" required>
+                    <option value="EAX">EAX</option>
+                    <option value="CBC">CBC</option>
+                    <option value="CFB">CFB</option>
+                    <option value="OFB">OFB</option>
+                    <option value="CTR">CTR</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="ivGroupDec">
+                <label for="ivDec">IV（十六进制，可选，若文件包含则无需提供）</label>
+                <input type="text" id="ivDec" placeholder="例如：a1b2...（32 个十六进制字符）">
+            </div>
+
+            <div class="form-group" id="nonceGroupDec">
+                <label for="nonceDec">Nonce（十六进制，可选）</label>
+                <input type="text" id="nonceDec" placeholder="例如：1a2b3c...（可留空）">
+            </div>
+
+            <button type="submit">解密并下载</button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <span>处理中...</span>
+        </div>
+        
+        <div class="message" id="message"></div>
+    </div>
+
+    <script src="/file_src/AES.js"></script>
+</body>
+</html>

@@ -19,9 +19,22 @@
 ```
 aes_web/
 ├── main.py                          # FastAPI 后端应用
+├── cleaner.py                        
+├── file_service.py
 ├── src/
-│   ├── a.html                       # 示例网页
-│   └── aes.html                     # AES 加密工具前端界面
+│   ├── AES/
+|   |   ├── AES.html
+|   |   ├── AES.css
+|   |   └── AES.js                  # AES 加密工具前端界面
+│   └── RSA/
+│       ├── RSA.html
+│       ├── RSA.css
+│       └── RSA.js                  # RSA 加密工具前端界面
+├── encrypt/
+|    ├── __init__.py
+│    ├── aes.py
+│    └── rsa.py                     
+|   
 ├── file/                            # 加密文件存储目录
 └── .gitignore
 ```
@@ -46,7 +59,7 @@ uvicorn main:app --reload
 
 ### 前端界面
 
-访问 `http://localhost:8000/file_html/aes.html` 打开加密工具：
+访问 `http://localhost:8000/file_html/AES/AES.html` 打开 AES 加密工具，或访问 `http://localhost:8000/file_html/RSA/RSA.html` 打开 RSA 工具：
 
 1. 选择要加密的文件
 2. 输入 16、24 或 32 字节的加密密钥
@@ -54,25 +67,60 @@ uvicorn main:app --reload
 4. 点击"加密并下载"按钮
 5. 加密文件将自动下载到本地
 
+
 ### API 端点
 
-#### 获取加密文件
-```http
-GET /file/{file_name}
-```
-下载已加密的文件。
+- **`GET /file/`**: 提示接口，返回简短说明。
 
-#### 加密文件
-```http
-POST /encrypt_file/
-Content-Type: multipart/form-data
+- **`GET /file/{file_name}`**: 下载存放在 `file/` 目录中的文件（如加密后的文件）。
 
-file: <binary file>
-key: <encryption key>
-mode: <EAX|CBC|CFB|OFB|CTR>
-iv: <initialization vector> (仅 CBC、CFB、OFB 模式需要)
-nonce: <nonce> (可选)
+- **`GET /file_src/{ways}/{file_name}`**: 直接返回 `src/{ways}/{file_name}` 静态资源（例如 `src/AES/AES.js`）。
+
+- **`GET /file_html/{ways}/{file_name}`**: 返回 `src/{ways}/{file_name}` 的 HTML 内容（例如 `file_html/AES/AES.html`）。
+
+- **`POST /aes/encrypt/`**: 上传文件并使用 AES 加密。
+
+	- 请求类型：`multipart/form-data`
+	- 参数：
+		- `file`: 二进制文件（必需）
+		- `key`: 加密密钥，长度为 16/24/32 字节（必需）
+		- `mode`: 加密模式，`EAX`、`CBC`、`CFB`、`OFB`、`CTR`（可选，默认 `EAX`）
+		- `iv`: 十六进制 IV（仅 `CBC`/`CFB`/`OFB` 需要）
+		- `nonce`: 十六进制 nonce（`EAX`/`CTR` 可选）
+
+- **`POST /aes/decrypt/`**: 上传 AES 加密后的文件并解密。
+
+	- 请求类型：`multipart/form-data`
+	- 参数：
+		- `file`: 二进制文件（必需，文件内容格式依模式而不同，例如 `EAX` 为 nonce+tag+ciphertext）
+		- `key`: 解密密钥（必需）
+		- `mode`: 加密模式（必需）
+
+- **`POST /rsa/generate_keys/`**: 生成 RSA 密钥对。
+
+	- 请求类型：`application/x-www-form-urlencoded`
+	- 参数：`key_size`（可选，默认 2048；可选值 1024 / 2048 / 3072 / 4096）
+
+- **`POST /rsa/encrypt/`**: 使用 RSA（或混合 RSA+AES）加密文件。
+
+	- 请求类型：`multipart/form-data`
+	- 参数：
+		- `file`: 要加密的文件（必需）
+		- `public_key`: Base64 编码的公钥文件（UploadFile，必需）
+
+- **`POST /rsa/decrypt/`**: 使用 RSA（或混合）解密文件。
+
+	- 请求类型：`multipart/form-data`
+	- 参数：
+		- `file`: 要解密的文件（必需）
+		- `private_key`: Base64 编码的私钥文件（UploadFile，必需）
+
+示例：使用 `curl` 上传并调用 AES 加密：
+
+```bash
+curl -F "file=@./example.txt" -F "key=0123456789abcdef" -F "mode=EAX" http://localhost:8000/aes/encrypt/
 ```
+
 
 ## 技术栈
 
@@ -82,19 +130,19 @@ nonce: <nonce> (可选)
 
 ## 加密模式说明
 
-| 模式 | 说明 | 使用场景 |
-|------|------|---------|
+| 模式    | 说明               | 使用场景             |
+| ------- | ------------------ | -------------------- |
 | **EAX** | 经过身份验证的加密 | 高安全性要求（推荐） |
-| **CBC** | 密码块链接 | 需要提供 IV |
-| **CFB** | 密文反馈 | 需要提供 IV |
-| **OFB** | 输出反馈 | 需要提供 IV |
-| **CTR** | 计数器模式 | 流式加密 |
+| **CBC** | 密码块链接         | 需要提供 IV          |
+| **CFB** | 密文反馈           | 需要提供 IV          |
+| **OFB** | 输出反馈           | 需要提供 IV          |
+| **CTR** | 计数器模式         | 流式加密             |
 
 ## 文件说明
 
 - main.py - 后端 FastAPI 应用，处理文件加密逻辑
-- aes.html - 加密工具前端界面
-- a.html - 示例网页模板
+- `src/AES/AES.html` - AES 加密工具前端界面
+- `src/RSA/RSA.html` - RSA 加密工具前端界面
 
 ## 安全提示
 

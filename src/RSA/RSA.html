@@ -1,0 +1,86 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSA 文件工具</title>
+    <link rel="stylesheet" href="/file_src/RSA/RSA.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 RSA 密钥与文件</h1>
+
+        <section class="card">
+            <h2>生成 RSA 密钥</h2>
+            <div class="form-row">
+                <label for="key_size">密钥位数</label>
+                <select id="key_size">
+                    <option value="2048">2048</option>
+                    <option value="1024">1024</option>
+                    <option value="3072">3072</option>
+                    <option value="4096">4096</option>
+                </select>
+                <button id="genKeys">生成密钥</button>
+            </div>
+
+            <div class="form-row">
+                <label>公钥（Base64）</label>
+                <textarea id="publicKey" rows="4" placeholder="生成后显示 Base64 公钥"></textarea>
+            </div>
+            <div class="form-row">
+                <label>私钥（Base64）</label>
+                <textarea id="privateKey" rows="4" placeholder="生成后显示 Base64 私钥"></textarea>
+            </div>
+            <div class="form-row small">
+                <button id="downloadPub">下载公钥 .pem</button>
+                <button id="downloadPriv">下载私钥 .pem</button>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>用公钥加密文件</h2>
+            <div class="form-row">
+                <label for="enc_file">选择文件</label>
+                <input type="file" id="enc_file">
+            </div>
+            <div class="form-row">
+                <label>上传公钥文件（Base64 文本），或在下方粘贴</label>
+                <input type="file" id="enc_pub_file" accept="text/*">
+            </div>
+            <div class="form-row">
+                <label for="enc_pub">公钥（Base64）</label>
+                <textarea id="enc_pub" rows="3" placeholder="粘贴公钥（Base64）或使用上方生成的公钥"></textarea>
+            </div>
+            <div class="form-row small">
+                <button id="encryptBtn">加密并下载</button>
+            </div>
+            <p style="font-size:12px;color:#666;margin-top:6px;">说明：若同时上传文件且粘贴内容，系统优先使用已上传的公钥文件。</p>
+        </section>
+
+        <section class="card">
+            <h2>用私钥解密文件</h2>
+            <div class="form-row">
+                <label for="dec_file">选择已加密文件</label>
+                <input type="file" id="dec_file">
+            </div>
+            <div class="form-row">
+                <label>上传私钥文件（Base64 文本），或在下方粘贴</label>
+                <input type="file" id="dec_priv_file" accept="text/*">
+            </div>
+            <div class="form-row">
+                <label for="dec_priv">私钥（Base64）</label>
+                <textarea id="dec_priv" rows="3" placeholder="粘贴私钥（Base64）或使用上方生成的私钥"></textarea>
+            </div>
+            <div class="form-row small">
+                <button id="decryptBtn">解密并下载</button>
+            </div>
+            <p style="font-size:12px;color:#666;margin-top:6px;">说明：若同时上传文件且粘贴内容，系统优先使用已上传的私钥文件。</p>
+        </section>
+
+        <div id="loading" class="loading">处理中…</div>
+        <div id="message" class="message"></div>
+    </div>
+
+    <script src="/file_src/RSA/RSA.js"></script>
+</body>
+</html>
